@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -19,13 +19,6 @@ class Log(db.Model):
 #Crear la tabla si no existe 
 with app.app_context(): 
     db.create_all()
-
-    prueba1 = Log(texto='Mensaje de Prueba 1')
-    prueba2 = Log(texto='Mensaje de Prueba 2')
-
-    db.session.add(prueba1)
-    db.session.add(prueba2)
-    db.session.commit()
 
 #Función para ordenar los registros por fecha y hora 
 def ordenar_por_fecha_y_hora(registros):
@@ -49,6 +42,23 @@ def agregar_mensajes_log(texto):
     db.session.add(nuevo_registro)
     db.session.commit()
 
+#Token de verificación para la configuración 
+TOKEN_CESAR = "cesar"
+
+@app.route('/webhook', methods=['GET','POST'])
+def webhook():
+    if request.method == 'GET': 
+        challenge = verificar_token(request)
+        return challenge
+    elif request.method == 'POST':
+        response = recibir_mensajes(request)
+        return response
+
+def verificar_token(req): 
+    return 0
+
+def recibir_mensajes(req): 
+    return 0
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
