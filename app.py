@@ -61,7 +61,7 @@ def verificar_token(req):
     if challenge and token == TOKEN_CESAR: 
         return challenge 
     else:
-        return jsonify({'error': 'Token inválido'}), 401
+        return jsonify({'error': 'Token invalido'}), 401
 
 def recibir_mensajes(req):
     req = request.get_json() 
