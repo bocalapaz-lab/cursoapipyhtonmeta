@@ -64,10 +64,19 @@ def verificar_token(req):
         return jsonify({'error': 'Token invalido'}), 401
 
 def recibir_mensajes(req):
-    data = req.get_json()
-    agregar_mensajes_log(json.dumps(data, ensure_ascii=False))
-    return jsonify({'message': 'EVENT_RECEIVED'}), 200
+    try:
+        data = req.get_json()
+        entry = data['entry'][0]
+        changes = entry['changes'][0]
+        value = changes['value']
+        objeto_mensaje = value['messages']
 
+        agregar_mensajes_log(json.dumps(objeto_mensaje, ensure_ascii=False))
+
+        return jsonify({'message': 'EVENT_RECEIVED'}), 200
+    except Exception as e:
+        return jsonify({'message': 'EVENT_RECEIVED'}), 200
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
 
