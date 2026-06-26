@@ -163,6 +163,55 @@ def enviar_mensajes_whatsapp(texto, number):
                 "link": "https://filesamples.com/samples/audio/mp3/sample1.mp3"
         }
     }
+
+    elif "5" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "text",
+            "text": {
+                "preview_url": True,
+                "body": "Introduccion al curso! https://youtu.be/6ULOE2tGlBM"
+        }
+    }
+
+    elif "6" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": "💖 En breve me pondré en contacto contigo. 😎"
+        }
+    }
+        
+    elif "7" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": "📅 Horario de Atención: Lunes a Viernes.\n📞 Horario: 9:00 am a 5:00 ..."
+        }
+    }
+        
+    elif "7" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": "Menu de opciones"
+            }
+        }
+
     
     else:
         data = {
