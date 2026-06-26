@@ -115,6 +115,44 @@ def enviar_mensajes_whatsapp(texto, number):
                 "body": "🚀 Hola, ¿Cómo estás? Bienvenido."
             }
         }
+    
+    elif "1" in texto: 
+        data  = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": "ey, como estamos"
+            }
+        }
+
+    elif "2" in texto: 
+        data  = {
+                "messaging_product": "whatsapp",
+                "to": number,
+                "type": "location",
+                "location": {
+                    "latitude": "-12.067158831865067",
+                    "longitude": "-77.03377940839486",
+                    "name": "Estadio Nacional del Perú",
+                    "address": "Cercado de Lima"
+                }
+            }
+
+    elif "3" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "document",
+            "document": {
+                    "link": "http://jornadasciberseguridad.riasc.unileon.es/archivos/ejemplo_esp.pdf",
+                    "caption": "Temario del Curso #001"
+        }
+    }   
+    
     else:
         data = {
             "messaging_product": "whatsapp",
