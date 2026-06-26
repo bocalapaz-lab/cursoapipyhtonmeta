@@ -148,10 +148,21 @@ def enviar_mensajes_whatsapp(texto, number):
             "to": number,
             "type": "document",
             "document": {
-                    "link": "http://jornadasciberseguridad.riasc.unileon.es/archivos/ejemplo_esp.pdf",
+                    "link": "https://www.soundczech.cz/temp/lorem-ipsum.pdf",
                     "caption": "Temario del Curso #001"
         }
-    }   
+    }
+
+    elif "4" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "audio",
+            "audio": {
+                "link": "https://filesamples.com/samples/audio/mp3/sample1.mp3"
+        }
+    }
     
     else:
         data = {
