@@ -130,9 +130,10 @@ def enviar_mensajes_whatsapp(texto, number):
     try:
         connection.request("POST", "/v25.0/1158458244021223/messages", data, headers)
         response = connection.getresponse()
-        print(response.status, response.reason)
+        response_body = response.read().decode('utf-8')
+        agregar_mensajes_log(f"WhatsApp API -> Status: {response.status} {response.reason} | Body: {response_body}")
     except Exception as e:
-        agregar_mensajes_log(str(e))
+        agregar_mensajes_log(f"Error de conexion: {str(e)}")
     finally:
         connection.close()
 
