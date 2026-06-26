@@ -92,8 +92,17 @@ def recibir_mensajes(req):
         agregar_mensajes_log(str(e))
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
+# Corrige el formato de numeros mexicanos: el webhook manda "521XXXXXXXXXX"
+# (13 digitos, con un "1" extra despues del codigo de pais 52), pero para
+# ENVIAR mensajes Meta espera "52XXXXXXXXXX" (12 digitos, sin el "1").
+def normalizar_numero_mx(numero):
+    if numero.startswith("521") and len(numero) == 13:
+        return "52" + numero[3:]
+    return numero
+
 def enviar_mensajes_whatsapp(texto, number):
     texto = texto.lower()
+    number = normalizar_numero_mx(number)
 
     if "hola" in texto:
         data = {
