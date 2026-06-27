@@ -103,7 +103,7 @@ def enviar_bienvenida(number):
         "to": number,
         "type": "image",
         "image": {
-            "link": "https://github.com/bocalapaz-lab/chatbot/blob/420911fea2ef758fd777af8ceae3545a7e595ffd/logo%20boca_page-0001.jpg"
+            "link": "https://github.com/bocalapaz-lab/chatbot/blob/main/logo%20boca_page-0001.jpg?raw=true"
         }
     }
     enviar_payload(data_imagen)
