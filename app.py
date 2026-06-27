@@ -434,8 +434,8 @@ def enviar_horario(number):
                 "personalizada* (6️⃣) podría no tener respuesta inmediata, "
                 "ya que nuestro equipo no estará disponible para contestar "
                 "en ese momento.\n\n"
-                "Si es necesario, puedes intentar comunicarte directamente "
-                "al consultorio al teléfono: TODO_TELEFONO_CONSULTORIO.\n\n"
+                "Si es necesario, puedes intentar comunicarte directamente"
+                "al teléfono del consultorio.\n\n"
                 "➡️ Escribe *0* para volver al menú principal, o escribe "
                 "directamente el número de otra opción que te interese. 😊"
             )
