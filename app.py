@@ -6,12 +6,10 @@ import json
 
 app = Flask(__name__)
 
-# Configuración de la base de datos SQLITE
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///metapython.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Modelo de la tabla log
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha_y_hora = db.Column(db.DateTime, default=datetime.utcnow)
@@ -34,7 +32,6 @@ def agregar_mensajes_log(texto):
     db.session.add(nuevo_registro)
     db.session.commit()
 
-# Token de verificación para la configuración del webhook (esto NO es el token de envío)
 TOKEN_CESAR = "cesar"
 
 @app.route('/webhook', methods=['GET', 'POST'])
@@ -62,16 +59,12 @@ def recibir_mensajes(req):
         if objeto_mensaje:
             mensaje = objeto_mensaje[0]
             numero = mensaje.get("from")
-            tipo = mensaje.get("type")
 
             agregar_mensajes_log(json.dumps(mensaje, ensure_ascii=False))
 
-            if tipo == "text":
-                texto = mensaje["text"]["body"]
-                enviar_mensajes_whatsapp(texto, numero)
-            else:
-                # Si mandan audio, imagen, sticker, ubicacion, etc. -> tambien mandamos el menu
-                enviar_menu_bienvenida(numero)
+            # Sin importar que tipo de mensaje sea (texto, audio, foto, lo que sea),
+            # siempre respondemos con el logo + el saludo de bienvenida.
+            enviar_bienvenida(numero)
 
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
@@ -79,9 +72,6 @@ def recibir_mensajes(req):
         agregar_mensajes_log(f"Error: {str(e)}")
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
-# Corrige el formato de numeros mexicanos: el webhook manda "521XXXXXXXXXX"
-# (con un "1" extra despues del codigo de pais 52), pero para ENVIAR
-# mensajes Meta espera "52XXXXXXXXXX" (sin el "1").
 def normalizar_numero_mx(numero):
     if numero.startswith("521") and len(numero) == 13:
         return "52" + numero[3:]
@@ -91,7 +81,7 @@ def enviar_payload(data):
     data = json.dumps(data)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBR0dNxUoIc02ZBZCm1MZAoTOM3SZCZCx5olkQJOm51DGTQWiP19JCnXkQDJI0z30erTGUOASXA6L0kEkIwalZBZAWMHGELptnEJakOguFmW8aMZCXe1MCISC693ZBbaPpr08Ueq5VMnF6TpTuMOyLR40d8KLOiOyWvRIfkIlq5wK588aas74b7taJDmiOVXpwLubzcYBK4UPdwqI6Cqd66ecyVWesg9eHcvJd4kOOphnA0gZANIUIIE8XLfZC21TfwAIjPQZBpBbcTkWYlayZBBxobLhnZBiml5GgZDZD"  # TODO: pon tu token de System User
+        "Authorization": "Bearer EAAVEa8dSzTcBR0MXYxCopzrf0Rg1MkPadQyFqKcZAuH237zFVA02BAeqAn84Y5nJnYZBokjXQZCT4esqIITG7fNvHZCTnbVZCWLA6JDQKfFfbDRF61nDStu3rYUIgBOmSpXZCRYWzQQfkfl1mSXE6YXzrRIqsZB7k0IJ6lzcDxo2Wl9ZBkxIwXamQSSmn2PUDZAOgC034CZC4M9giultqzZCBoj1QPru6V5hG6RQ7KU03Q4QeQGDfVJ8Doehp5gdwZBHYJqKuAnihTgEjPS4qb7mwoZAW5BZB3SKooUqzIhv7LngZDZD"
     }
     connection = http.client.HTTPSConnection("graph.facebook.com")
     try:
@@ -104,130 +94,32 @@ def enviar_payload(data):
     finally:
         connection.close()
 
-def enviar_menu_bienvenida(number):
+def enviar_bienvenida(number):
     number = normalizar_numero_mx(number)
-    data = {
+
+    # 1. Mandamos primero la foto del logo
+    data_imagen = {
+        "messaging_product": "whatsapp",
+        "to": number,
+        "type": "image",
+        "image": {
+            "link": "https://github.com/bocalapaz-lab/chatbot/blob/420911fea2ef758fd777af8ceae3545a7e595ffd/logo%20boca_page-0001.jpg"
+        }
+    }
+    enviar_payload(data_imagen)
+
+    # 2. Justo despues, mandamos el mensaje de bienvenida
+    data_bienvenida = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": number,
         "type": "text",
         "text": {
             "preview_url": False,
-            "body": (
-                "¡Hola! 👋 Gracias por escribirnos a *BOCA*.\n\n"
-                "Soy el asistente virtual y estoy aquí para ayudarte mientras "
-                "un miembro de nuestro equipo te atiende personalmente.\n\n"
-                "Elige una opción escribiendo el número:\n\n"
-                "1️⃣ Conócenos: nuestro equipo y experiencia\n"
-                "2️⃣ Video de nuestras instalaciones\n"
-                "3️⃣ Ubicación del consultorio\n"
-                "4️⃣ Estacionamiento\n\n"
-                "Escribe el número de la opción que te interese 😊"
-            )
+            "body": "¡Hola! 👋 Gracias por escribirnos a *BOCA*."
         }
     }
-    enviar_payload(data)
-
-def enviar_mensajes_whatsapp(texto, number):
-    texto = texto.strip().lower()
-    number = normalizar_numero_mx(number)
-
-    if texto == "1":
-        data = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": number,
-            "type": "text",
-            "text": {
-                "preview_url": False,
-                "body": (
-                    "👋 *¡Bienvenido a BOCA!*\n\n"
-                    "Somos un equipo de profesionales dedicados a tu salud, "
-                    "comprometidos con brindarte la mejor atención.\n\n"
-                    "👨‍⚕️ *Dr. [NOMBRE DEL DOCTOR]*\n"
-                    "[Especialidad, cédula profesional, años de experiencia]\n\n"
-                    "👩‍⚕️ *Dra. [NOMBRE DE LA DOCTORA]*\n"
-                    "[Especialidad, cédula profesional, años de experiencia]\n\n"
-                    "[Aquí puedes agregar misión, valores, certificaciones, "
-                    "tecnología que usan, etc.]\n\n"
-                    "Escribe *0* para volver al menú. 😊"
-                )
-            }
-        }
-        enviar_payload(data)
-
-    elif texto == "2":
-        data = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": number,
-            "type": "text",
-            "text": {
-                "preview_url": True,
-                "body": (
-                    "🎥 Conoce nuestras instalaciones y a nuestro equipo en BOCA:\n"
-                    "TODO_PON_AQUI_EL_LINK_DEL_VIDEO\n\n"
-                    "Escribe *0* para volver al menú."
-                )
-            }
-        }
-        enviar_payload(data)
-
-    elif texto == "3":
-        data = {
-            "messaging_product": "whatsapp",
-            "to": number,
-            "type": "location",
-            "location": {
-                "latitude": "TODO_LATITUD_DEL_CONSULTORIO",
-                "longitude": "TODO_LONGITUD_DEL_CONSULTORIO",
-                "name": "BOCA",
-                "address": "TODO_DIRECCION_COMPLETA_DEL_CONSULTORIO"
-            }
-        }
-        enviar_payload(data)
-
-    elif texto == "4":
-        # 1) Mandamos la ubicación del estacionamiento sugerido
-        data_ubicacion = {
-            "messaging_product": "whatsapp",
-            "to": number,
-            "type": "location",
-            "location": {
-                "latitude": "TODO_LATITUD_ESTACIONAMIENTO",
-                "longitude": "TODO_LONGITUD_ESTACIONAMIENTO",
-                "name": "Estacionamiento sugerido",
-                "address": "TODO_DIRECCION_DEL_ESTACIONAMIENTO"
-            }
-        }
-        enviar_payload(data_ubicacion)
-
-        # 2) Mandamos el aviso/descargo de responsabilidad
-        data_aviso = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": number,
-            "type": "text",
-            "text": {
-                "preview_url": False,
-                "body": (
-                    "🅿️ Nuestro consultorio no cuenta con estacionamiento propio "
-                    "ni en la vía pública. Te recomendamos el estacionamiento "
-                    "ubicado cruzando la calle (ubicación enviada arriba 👆).\n\n"
-                    "⚠️ Este estacionamiento es un servicio independiente. "
-                    "*BOCA no se hace responsable* por el vehículo, sus "
-                    "pertenencias, ni por el servicio que ahí se preste.\n\n"
-                    "Escribe *0* para volver al menú."
-                )
-            }
-        }
-        enviar_payload(data_aviso)
-
-    elif texto == "0":
-        enviar_menu_bienvenida(number)
-
-    else:
-        enviar_menu_bienvenida(number)
+    enviar_payload(data_bienvenida)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
