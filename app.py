@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import http.client
 import json
+import time
 
 app = Flask(__name__)
 
@@ -68,6 +69,8 @@ def recibir_mensajes(req):
 
                 if texto == "1":
                     enviar_conocenos(numero)
+                elif texto == "2":
+                    enviar_video_construccion(numero)
                 else:
                     enviar_bienvenida(numero)
             else:
@@ -89,7 +92,7 @@ def enviar_payload(data):
     data = json.dumps(data)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBR0MXYxCopzrf0Rg1MkPadQyFqKcZAuH237zFVA02BAeqAn84Y5nJnYZBokjXQZCT4esqIITG7fNvHZCTnbVZCWLA6JDQKfFfbDRF61nDStu3rYUIgBOmSpXZCRYWzQQfkfl1mSXE6YXzrRIqsZB7k0IJ6lzcDxo2Wl9ZBkxIwXamQSSmn2PUDZAOgC034CZC4M9giultqzZCBoj1QPru6V5hG6RQ7KU03Q4QeQGDfVJ8Doehp5gdwZBHYJqKuAnihTgEjPS4qb7mwoZAW5BZB3SKooUqzIhv7LngZDZD"
+        "Authorization": "Bearer TU_TOKEN_AQUI"
     }
     connection = http.client.HTTPSConnection("graph.facebook.com")
     try:
@@ -116,6 +119,10 @@ def enviar_bienvenida(number):
     }
     enviar_payload(data_imagen)
 
+    # Pequena pausa para que la imagen alcance a procesarse/mostrarse
+    # antes de que llegue el texto de bienvenida.
+    time.sleep(1.5)
+
     # 2. Mensaje de bienvenida + menu
     data_bienvenida = {
         "messaging_product": "whatsapp",
@@ -127,10 +134,10 @@ def enviar_bienvenida(number):
             "body": (
                 "¡Hola! 👋 Gracias por escribirnos a *BOCA*.\n\n"
                 "Soy el asistente virtual del consultorio. Estoy aquí para "
-                "ayudarte en lo que necesites mientras uno de nuestros "
-                "especialistas te atiende personalmente. 😊\n\n"
+                "ayudarte en lo que necesites. 😊\n\n"
                 "Elige una opción escribiendo el número:\n\n"
-                "1️⃣ Conócenos\n\n"
+                "1️⃣ Conócenos\n"
+                "2️⃣ Video de nosotros\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -165,6 +172,27 @@ def enviar_conocenos(number):
                 "reconocido por la confianza de nuestros pacientes, la "
                 "calidez de nuestro trato y la calidad de nuestros resultados.\n\n"
                 "Escribe *0* para volver al menú principal. 😊"
+            )
+        }
+    }
+    enviar_payload(data)
+
+def enviar_video_construccion(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "🚧 *Video en construcción*\n\n"
+                "Estamos preparando con mucho cariño un video para darte la "
+                "bienvenida que te mereces y mostrarte nuestras instalaciones. "
+                "Estará disponible muy pronto. ¡Gracias por tu paciencia! 😊\n\n"
+                "Escribe *0* para volver al menú principal."
             )
         }
     }
