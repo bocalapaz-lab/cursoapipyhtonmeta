@@ -204,7 +204,8 @@ def enviar_conocenos(number):
                 "Ser un consultorio de referencia en cirugía maxilofacial, "
                 "reconocido por la confianza de nuestros pacientes, la "
                 "calidez de nuestro trato y la calidad de nuestros resultados.\n\n"
-                "➡️ Para volver al menú principal, debes escribir *0*. 😊"
+                "➡️ Escribe *0* para volver al menú principal, o escribe "
+                "directamente el número de otra opción que te interese. 😊"
             )
         }
     }
@@ -225,7 +226,8 @@ def enviar_video_construccion(number):
                 "Estamos preparando con mucho cariño un video para darte la "
                 "bienvenida que te mereces y mostrarte nuestras instalaciones. "
                 "Estará disponible muy pronto. ¡Gracias por tu paciencia! 😊\n\n"
-                "➡️ Para volver al menú principal, debes escribir *0*."
+                "➡️ Escribe *0* para volver al menú principal, o escribe "
+                "directamente el número de otra opción que te interese."
             )
         }
     }
@@ -263,7 +265,8 @@ def enviar_ubicacion(number):
                 "Av. Rosendo Márquez 16, 50 Doctors Torres Médicas V\n"
                 "La Paz, 72160 Heroica Puebla de Zaragoza, Pue.\n\n"
                 "¡Te esperamos! 😊\n\n"
-                "➡️ Para volver al menú principal, debes escribir *0*."
+                "➡️ Escribe *0* para volver al menú principal, o escribe "
+                "directamente el número de otra opción que te interese."
             )
         }
     }
@@ -307,7 +310,8 @@ def enviar_estacionamiento(number):
                 "⚠️ Por lo anterior, *BOCA no se hace responsable* por tu "
                 "vehículo, sus pertenencias, ni por cualquier situación que "
                 "pudiera presentarse en dicho estacionamiento.\n\n"
-                "➡️ Para volver al menú principal, debes escribir *0*. 😊"
+                "➡️ Escribe *0* para volver al menú principal, o escribe "
+                "directamente el número de otra opción que te interese. 😊"
             )
         }
     }
