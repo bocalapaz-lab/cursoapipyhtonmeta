@@ -103,7 +103,20 @@ def recibir_mensajes(req):
                 # que lo veas y respondas tu mismo desde el panel.
                 return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
-            if tipo == "text":
+            if tipo == "interactive":
+                interactive = mensaje.get("interactive", {})
+                if interactive.get("type") == "button_reply":
+                    boton_id = interactive["button_reply"]["id"]
+
+                    if boton_id == "btnmensaje":
+                        enviar_pausa_bot(numero)
+                        guardar_estado(numero_normalizado, "atencion_humana")
+
+                    elif boton_id == "btnllamada":
+                        agregar_mensajes_log(f"SOLICITUD DE LLAMADA -> {numero_normalizado}")
+                        enviar_confirmacion_llamada(numero)
+
+            elif tipo == "text":
                 texto = mensaje["text"]["body"].strip()
 
                 if texto == "1":
@@ -116,7 +129,6 @@ def recibir_mensajes(req):
                     enviar_estacionamiento(numero)
                 elif texto == "5":
                     enviar_ayuda_personalizada(numero)
-                    guardar_estado(numero_normalizado, "atencion_humana")
                 elif texto == "0":
                     enviar_menu(numero)
                 else:
@@ -166,10 +178,12 @@ def finalizar():
             "text": {
                 "preview_url": False,
                 "body": (
-                    "¿Hay algo más en lo que podamos ayudarte? 😊\n\n"
+                    "✅ *Conversación finalizada*\n\n"
+                    "Tu atención personalizada con nuestro especialista ha "
+                    "concluido. Esperamos haber resuelto tus dudas.\n\n"
                     "Si necesitas algo más, escribe *0* para volver al menú "
                     "principal.\n\n"
-                    "¡Gracias por contactar a *BOCA*!"
+                    "¡Gracias por contactar a *BOCA*! 😊"
                 )
             }
         }
@@ -405,6 +419,47 @@ def enviar_ayuda_personalizada(number):
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
         "to": number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": (
+                    "💬 *Ayuda personalizada*\n\n"
+                    "Cuéntanos cómo prefieres que te ayudemos:"
+                )
+            },
+            "footer": {
+                "text": "Selecciona una opción"
+            },
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "btnmensaje",
+                            "title": "Dejar mi mensaje"
+                        }
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "btnllamada",
+                            "title": "Solicitar llamada"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    enviar_payload(data)
+
+def enviar_pausa_bot(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
         "type": "text",
         "text": {
             "preview_url": False,
@@ -415,6 +470,31 @@ def enviar_ayuda_personalizada(number):
                 "mismo medio.\n\n"
                 "Te pedimos un poco de paciencia mientras te asignamos con "
                 "alguien disponible. 😊"
+            )
+        }
+    }
+    enviar_payload(data)
+
+def enviar_confirmacion_llamada(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "📞 *Solicitud de llamada recibida*\n\n"
+                "Hemos registrado tu solicitud y uno de nuestros "
+                "especialistas se pondrá en contacto contigo por teléfono "
+                "lo antes posible.\n\n"
+                "Te pedimos estar al pendiente de tu teléfono, ya que la "
+                "llamada podría llegar desde un número distinto al de este "
+                "chat.\n\n"
+                "Gracias por confiar en *BOCA* para tu atención. 😊\n\n"
+                "➡️ Escribe *0* para volver al menú principal."
             )
         }
     }
