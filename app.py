@@ -76,6 +76,9 @@ def recibir_mensajes(req):
             if "type" in mensaje:
                 tipo = mensaje["type"]
 
+                agregar_mensajes_log(json.dumps(tipo))
+
+
                 if tipo == "interactive":
                     return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
@@ -200,7 +203,7 @@ def enviar_mensajes_whatsapp(texto, number):
         }
     }
         
-    elif "7" in texto:
+    elif "0" in texto:
         data = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -212,7 +215,48 @@ def enviar_mensajes_whatsapp(texto, number):
             }
         }
 
-    
+    elif "boton" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {
+                    "text": "¿Confirmas tu registro?"
+                },
+                "footer": {
+                    "text": "Selecciona una de las opciones"
+                },
+                "action": {
+                    "buttons": [
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": "btnsi",
+                                "title": "Si"
+                            }
+                        },
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": "btnno",
+                                "title": "No"
+                            }
+                        },
+                        {
+                            "type": "reply",
+                            "reply": {
+                                "id": "btntalvez",
+                                "title": "Tal Vez"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
     else:
         data = {
             "messaging_product": "whatsapp",
