@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import http.client
@@ -16,6 +16,12 @@ class Log(db.Model):
     fecha_y_hora = db.Column(db.DateTime, default=datetime.utcnow)
     texto = db.Column(db.Text)
 
+# Recuerda que numeros estan siendo atendidos por una persona (no por el bot)
+class EstadoUsuario(db.Model):
+    numero = db.Column(db.String, primary_key=True)
+    estado = db.Column(db.String)
+    desde = db.Column(db.DateTime, default=datetime.utcnow)
+
 with app.app_context():
     db.create_all()
 
@@ -26,12 +32,36 @@ def ordenar_por_fecha_y_hora(registros):
 def index():
     registros = Log.query.all()
     registros_ordenados = ordenar_por_fecha_y_hora(registros)
-    return render_template('index.html', registros=registros_ordenados)
+    conversaciones_activas = EstadoUsuario.query.filter_by(estado="atencion_humana").all()
+    return render_template(
+        'index.html',
+        registros=registros_ordenados,
+        conversaciones_activas=conversaciones_activas
+    )
 
 def agregar_mensajes_log(texto):
     nuevo_registro = Log(texto=texto)
     db.session.add(nuevo_registro)
     db.session.commit()
+
+def obtener_estado(numero):
+    registro = EstadoUsuario.query.get(numero)
+    return registro.estado if registro else None
+
+def guardar_estado(numero, estado):
+    registro = EstadoUsuario.query.get(numero)
+    if registro:
+        registro.estado = estado
+    else:
+        registro = EstadoUsuario(numero=numero, estado=estado)
+        db.session.add(registro)
+    db.session.commit()
+
+def borrar_estado(numero):
+    registro = EstadoUsuario.query.get(numero)
+    if registro:
+        db.session.delete(registro)
+        db.session.commit()
 
 TOKEN_CESAR = "cesar"
 
@@ -60,9 +90,18 @@ def recibir_mensajes(req):
         if objeto_mensaje:
             mensaje = objeto_mensaje[0]
             numero = mensaje.get("from")
+            numero_normalizado = normalizar_numero_mx(numero)
             tipo = mensaje.get("type")
 
             agregar_mensajes_log(json.dumps(mensaje, ensure_ascii=False))
+
+            estado = obtener_estado(numero_normalizado)
+
+            if estado == "atencion_humana":
+                # Ya esta en manos de una persona. El bot NO responde
+                # automaticamente -- el mensaje solo queda registrado para
+                # que lo veas y respondas tu mismo desde el panel.
+                return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
             if tipo == "text":
                 texto = mensaje["text"]["body"].strip()
@@ -75,14 +114,14 @@ def recibir_mensajes(req):
                     enviar_ubicacion(numero)
                 elif texto == "4":
                     enviar_estacionamiento(numero)
+                elif texto == "5":
+                    enviar_ayuda_personalizada(numero)
+                    guardar_estado(numero_normalizado, "atencion_humana")
                 elif texto == "0":
-                    # "0" regresa al menu, pero SIN volver a mandar la imagen
                     enviar_menu(numero)
                 else:
-                    # Cualquier otra cosa (hola, una duda, etc.) -> bienvenida completa con imagen
                     enviar_bienvenida(numero)
             else:
-                # Si mandan audio, foto, sticker, etc. -> tambien mandamos la bienvenida completa
                 enviar_bienvenida(numero)
 
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
@@ -90,6 +129,55 @@ def recibir_mensajes(req):
     except Exception as e:
         agregar_mensajes_log(f"Error: {str(e)}")
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
+
+# Ruta nueva: aqui llega cuando TU escribes una respuesta desde el panel web
+@app.route('/responder', methods=['POST'])
+def responder():
+    numero = request.form.get('numero')
+    mensaje_texto = request.form.get('mensaje')
+
+    if numero and mensaje_texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": numero,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": mensaje_texto
+            }
+        }
+        enviar_payload(data)
+        agregar_mensajes_log(f"RESPUESTA MANUAL -> {numero}: {mensaje_texto}")
+
+    return redirect('/')
+
+# Ruta nueva: aqui llega cuando le das clic a "Finalizar conversacion"
+@app.route('/finalizar', methods=['POST'])
+def finalizar():
+    numero = request.form.get('numero')
+
+    if numero:
+        data_cierre = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": numero,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": (
+                    "¿Hay algo más en lo que podamos ayudarte? 😊\n\n"
+                    "Si necesitas algo más, escribe *0* para volver al menú "
+                    "principal.\n\n"
+                    "¡Gracias por contactar a *BOCA*!"
+                )
+            }
+        }
+        enviar_payload(data_cierre)
+        borrar_estado(numero)
+        agregar_mensajes_log(f"CONVERSACION FINALIZADA -> {numero}")
+
+    return redirect('/')
 
 def normalizar_numero_mx(numero):
     if numero.startswith("521") and len(numero) == 13:
@@ -100,7 +188,7 @@ def enviar_payload(data):
     data = json.dumps(data)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBRZCRz3dNQgIm11BsShisj3BmvbZAuBJ9sw3kUhsuS5Wi76BInOWhvdHZB2WKmpV5M2eA7IY0VNTMLTpRCULbdNZBI6gZCclGs5aZCSeTIh0mUoPzC20BcBPMmKeKvmwxiJtgvxlI6DQ2l2bAwnZAh13JEfUOdSLZCCH6kVTlqVmkZC8StGrRZAWkcMhSxYTdqZCRQG9u9u0KMFRfbv2BlEyfrVLMafzovv7jM2nZADC2ZCSvhzeHdBeiiq74hZAxF0iZBIbuEtA6pNzBZABuHqe27FYosVXxPvrHHQZDZD"
+        "Authorization": "Bearer EAAVEa8dSzTcBR05n3oshtVFoUcUBrD3KafQLR9tQjyf41S63KjHqIOvRXfAPUuYcEZAIL6UESv82BwbY4O1qkV481R7Hxe2HAiSFzJSLWK1df2kN28c4cLg8hKHPUefNdxkoGCZCxv7JBadGmQVR6M8GGaHaBoHZAtZBZAHRKHMn2Yh4XMRTdvWaoPE02fJiw1U6E3TarbA6eT7ae9eK4AFrwCACzS1p3bn0WwQSYJSic1WP5ZA88Jgd8FNzBENGrLffgczA5mxcj4Bw41p2JTCZA1ja8rpEYSSJhpizAZDZD"
     }
     connection = http.client.HTTPSConnection("graph.facebook.com")
     try:
@@ -116,7 +204,6 @@ def enviar_payload(data):
 def enviar_bienvenida(number):
     number = normalizar_numero_mx(number)
 
-    # 1. Mandamos primero la foto del logo
     data_imagen = {
         "messaging_product": "whatsapp",
         "to": number,
@@ -127,11 +214,8 @@ def enviar_bienvenida(number):
     }
     enviar_payload(data_imagen)
 
-    # Pequena pausa para que la imagen alcance a procesarse/mostrarse
-    # antes de que llegue el texto de bienvenida.
     time.sleep(1.5)
 
-    # 2. Mensaje de bienvenida + menu
     data_bienvenida = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -147,7 +231,8 @@ def enviar_bienvenida(number):
                 "1️⃣ Conócenos\n"
                 "2️⃣ Video de nosotros\n"
                 "3️⃣ Ubicación del consultorio\n"
-                "4️⃣ Estacionamiento\n\n"
+                "4️⃣ Estacionamiento\n"
+                "5️⃣ Ayuda personalizada\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -157,7 +242,6 @@ def enviar_bienvenida(number):
 def enviar_menu(number):
     number = normalizar_numero_mx(number)
 
-    # Solo el menu, sin imagen ni saludo -- para cuando alguien regresa con "0"
     data = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -170,7 +254,8 @@ def enviar_menu(number):
                 "1️⃣ Conócenos\n"
                 "2️⃣ Video de nosotros\n"
                 "3️⃣ Ubicación del consultorio\n"
-                "4️⃣ Estacionamiento\n\n"
+                "4️⃣ Estacionamiento\n"
+                "5️⃣ Ayuda personalizada\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -236,7 +321,6 @@ def enviar_video_construccion(number):
 def enviar_ubicacion(number):
     number = normalizar_numero_mx(number)
 
-    # 1. Mandamos el pin de ubicacion
     data_ubicacion = {
         "messaging_product": "whatsapp",
         "to": number,
@@ -252,7 +336,6 @@ def enviar_ubicacion(number):
 
     time.sleep(1.5)
 
-    # 2. Mensaje de seguimiento con la direccion en texto + opcion de volver al menu
     data_texto = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -275,7 +358,6 @@ def enviar_ubicacion(number):
 def enviar_estacionamiento(number):
     number = normalizar_numero_mx(number)
 
-    # 1. Mandamos el pin de ubicacion del estacionamiento
     data_ubicacion = {
         "messaging_product": "whatsapp",
         "to": number,
@@ -291,7 +373,6 @@ def enviar_estacionamiento(number):
 
     time.sleep(1.5)
 
-    # 2. Aclaracion + descargo de responsabilidad
     data_texto = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -316,6 +397,28 @@ def enviar_estacionamiento(number):
         }
     }
     enviar_payload(data_texto)
+
+def enviar_ayuda_personalizada(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "🙏 *¡Gracias por contactarnos!*\n\n"
+                "En breve estarás en contacto con uno de nuestros "
+                "especialistas, quien te atenderá personalmente por este "
+                "mismo medio.\n\n"
+                "Te pedimos un poco de paciencia mientras te asignamos con "
+                "alguien disponible. 😊"
+            )
+        }
+    }
+    enviar_payload(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
