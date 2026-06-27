@@ -75,23 +75,14 @@ def recibir_mensajes(req):
                     enviar_ubicacion(numero)
                 elif texto == "4":
                     enviar_estacionamiento(numero)
-                elif texto == "5":
-                    enviar_ayuda_personalizada(numero)
+                elif texto == "0":
+                    # "0" regresa al menu, pero SIN volver a mandar la imagen
+                    enviar_menu(numero)
                 else:
+                    # Cualquier otra cosa (hola, una duda, etc.) -> bienvenida completa con imagen
                     enviar_bienvenida(numero)
-
-            elif tipo == "interactive":
-                interactive = mensaje.get("interactive", {})
-                if interactive.get("type") == "button_reply":
-                    boton_id = interactive["button_reply"]["id"]
-
-                    if boton_id == "btnmensaje":
-                        enviar_confirmacion_mensaje(numero)
-                    elif boton_id == "btnllamada":
-                        enviar_confirmacion_llamada(numero)
-
             else:
-                # Si mandan audio, imagen, sticker, etc. -> tambien mandamos la bienvenida
+                # Si mandan audio, foto, sticker, etc. -> tambien mandamos la bienvenida completa
                 enviar_bienvenida(numero)
 
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
@@ -156,13 +147,35 @@ def enviar_bienvenida(number):
                 "1️⃣ Conócenos\n"
                 "2️⃣ Video de nosotros\n"
                 "3️⃣ Ubicación del consultorio\n"
-                "4️⃣ Estacionamiento\n"
-                "5️⃣ Ayuda personalizada\n\n"
+                "4️⃣ Estacionamiento\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
     }
     enviar_payload(data_bienvenida)
+
+def enviar_menu(number):
+    number = normalizar_numero_mx(number)
+
+    # Solo el menu, sin imagen ni saludo -- para cuando alguien regresa con "0"
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "📋 *Menú principal*\n\n"
+                "1️⃣ Conócenos\n"
+                "2️⃣ Video de nosotros\n"
+                "3️⃣ Ubicación del consultorio\n"
+                "4️⃣ Estacionamiento\n\n"
+                "Escribe el número de la opción que te interese."
+            )
+        }
+    }
+    enviar_payload(data)
 
 def enviar_conocenos(number):
     number = normalizar_numero_mx(number)
@@ -191,7 +204,7 @@ def enviar_conocenos(number):
                 "Ser un consultorio de referencia en cirugía maxilofacial, "
                 "reconocido por la confianza de nuestros pacientes, la "
                 "calidez de nuestro trato y la calidad de nuestros resultados.\n\n"
-                "Escribe *0* para volver al menú principal. 😊"
+                "➡️ Para volver al menú principal, debes escribir *0*. 😊"
             )
         }
     }
@@ -212,7 +225,7 @@ def enviar_video_construccion(number):
                 "Estamos preparando con mucho cariño un video para darte la "
                 "bienvenida que te mereces y mostrarte nuestras instalaciones. "
                 "Estará disponible muy pronto. ¡Gracias por tu paciencia! 😊\n\n"
-                "Escribe *0* para volver al menú principal."
+                "➡️ Para volver al menú principal, debes escribir *0*."
             )
         }
     }
@@ -250,7 +263,7 @@ def enviar_ubicacion(number):
                 "Av. Rosendo Márquez 16, 50 Doctors Torres Médicas V\n"
                 "La Paz, 72160 Heroica Puebla de Zaragoza, Pue.\n\n"
                 "¡Te esperamos! 😊\n\n"
-                "Escribe *0* para volver al menú principal."
+                "➡️ Para volver al menú principal, debes escribir *0*."
             )
         }
     }
@@ -294,106 +307,11 @@ def enviar_estacionamiento(number):
                 "⚠️ Por lo anterior, *BOCA no se hace responsable* por tu "
                 "vehículo, sus pertenencias, ni por cualquier situación que "
                 "pudiera presentarse en dicho estacionamiento.\n\n"
-                "Escribe *0* para volver al menú principal. 😊"
+                "➡️ Para volver al menú principal, debes escribir *0*. 😊"
             )
         }
     }
     enviar_payload(data_texto)
-
-def enviar_ayuda_personalizada(number):
-    number = normalizar_numero_mx(number)
-
-    data = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "type": "interactive",
-        "interactive": {
-            "type": "button",
-            "body": {
-                "text": (
-                    "💬 *Ayuda personalizada*\n\n"
-                    "Cuéntanos qué necesitas y con gusto te ayudamos. Elige "
-                    "la opción que se ajuste mejor a tu situación:\n\n"
-                    "Si se trata de una urgencia médica grave, te "
-                    "recomendamos acudir directamente a un servicio de "
-                    "urgencias o llamar al 911."
-                )
-            },
-            "footer": {
-                "text": "Selecciona una opción"
-            },
-            "action": {
-                "buttons": [
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "btnmensaje",
-                            "title": "Dejar mi mensaje"
-                        }
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "btnllamada",
-                            "title": "Solicitar llamada"
-                        }
-                    }
-                ]
-            }
-        }
-    }
-    enviar_payload(data)
-
-def enviar_confirmacion_mensaje(number):
-    number = normalizar_numero_mx(number)
-
-    data = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "type": "text",
-        "text": {
-            "preview_url": False,
-            "body": (
-                "🙏 *¡Gracias por escribirnos!*\n\n"
-                "Tu mensaje ha quedado registrado en nuestro sistema y será "
-                "leído por uno de nuestros especialistas a la brevedad "
-                "posible.\n\n"
-                "Hacemos nuestro mejor esfuerzo por responder en el menor "
-                "tiempo posible; sin embargo, el tiempo de respuesta puede "
-                "variar dependiendo de nuestra agenda y horario de atención.\n\n"
-                "Agradecemos mucho tu paciencia y confianza en *BOCA*. 😊\n\n"
-                "Escribe *0* para volver al menú principal."
-            )
-        }
-    }
-    enviar_payload(data)
-
-def enviar_confirmacion_llamada(number):
-    number = normalizar_numero_mx(number)
-
-    data = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": number,
-        "type": "text",
-        "text": {
-            "preview_url": False,
-            "body": (
-                "📞 *Solicitud de llamada recibida*\n\n"
-                "Hemos registrado tu solicitud y uno de nuestros "
-                "especialistas se pondrá en contacto contigo por teléfono "
-                "lo antes posible.\n\n"
-                "Te pedimos estar al pendiente de tu teléfono, ya que la "
-                "llamada podría llegar desde un número distinto al de este "
-                "chat.\n\n"
-                "Gracias por confiar en *BOCA* para tu atención. 😊\n\n"
-                "Escribe *0* para volver al menú principal."
-            )
-        }
-    }
-    enviar_payload(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
