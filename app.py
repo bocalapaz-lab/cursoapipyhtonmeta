@@ -71,6 +71,8 @@ def recibir_mensajes(req):
                     enviar_conocenos(numero)
                 elif texto == "2":
                     enviar_video_construccion(numero)
+                elif texto == "3":
+                    enviar_ubicacion(numero)
                 else:
                     enviar_bienvenida(numero)
             else:
@@ -137,7 +139,8 @@ def enviar_bienvenida(number):
                 "ayudarte en lo que necesites. 😊\n\n"
                 "Elige una opción escribiendo el número:\n\n"
                 "1️⃣ Conócenos\n"
-                "2️⃣ Video de nosotros\n\n"
+                "2️⃣ Video de nosotros\n"
+                "3️⃣ Ubicación del consultorio\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -197,6 +200,44 @@ def enviar_video_construccion(number):
         }
     }
     enviar_payload(data)
+
+def enviar_ubicacion(number):
+    number = normalizar_numero_mx(number)
+
+    # 1. Mandamos el pin de ubicacion
+    data_ubicacion = {
+        "messaging_product": "whatsapp",
+        "to": number,
+        "type": "location",
+        "location": {
+            "latitude": "19.056722627267366",
+            "longitude": "-98.23117504866542",
+            "name": "BOCA",
+            "address": "Av. Rosendo Márquez 16, Doctors Torres Médicas V, Consultorio 50, La Paz, 72160 Heroica Puebla de Zaragoza, Pue."
+        }
+    }
+    enviar_payload(data_ubicacion)
+
+    time.sleep(1.5)
+
+    # 2. Mensaje de seguimiento con la direccion en texto + opcion de volver al menu
+    data_texto = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "📍 *Nuestra ubicación*\n\n"
+                "Av. Rosendo Márquez 16, Torres Médicas V, 50 Doctors"
+                "La Paz, 72160 Heroica Puebla de Zaragoza, Pue.\n\n"
+                "¡Te esperamos! 😊\n\n"
+                "Escribe *0* para volver al menú principal."
+            )
+        }
+    }
+    enviar_payload(data_texto)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
