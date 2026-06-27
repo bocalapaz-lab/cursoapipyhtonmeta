@@ -36,7 +36,6 @@ mensajes_log = []
 # Función para agregar mensajes y guardar en la base de datos
 def agregar_mensajes_log(texto):
     mensajes_log.append(texto)
-
     nuevo_registro = Log(texto=texto)
     db.session.add(nuevo_registro)
     db.session.commit()
@@ -76,10 +75,16 @@ def recibir_mensajes(req):
             if "type" in mensaje:
                 tipo = mensaje["type"]
 
-                agregar_mensajes_log(json.dumps(tipo))
-
-
                 if tipo == "interactive":
+                    # Ahora guardamos el mensaje completo, no solo la palabra "interactive"
+                    agregar_mensajes_log(json.dumps(mensaje, ensure_ascii=False))
+
+                    interactive = mensaje.get("interactive", {})
+                    if interactive.get("type") == "button_reply":
+                        boton_id = interactive["button_reply"]["id"]
+                        numero = mensaje["from"]
+                        responder_boton(boton_id, numero)
+
                     return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
                 if "text" in mensaje:
@@ -103,6 +108,54 @@ def normalizar_numero_mx(numero):
         return "52" + numero[3:]
     return numero
 
+# Función central que manda cualquier payload ya armado a Graph API.
+# La usan tanto enviar_mensajes_whatsapp como responder_boton, para no
+# repetir el mismo bloque de conexión/headers dos veces.
+def enviar_payload(data):
+    data = json.dumps(data)
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer EAAVEa8dSzTcBR6YZCaDpopNnqZBOJZCAtZBj9rzu03y1EWVZC1mxofA7QGZBpesCOiyKxRFhoZBa4dYic4oZBAcnTI2WRZCgSwW9Xg0aZBCz8kgnRGvcEFubiKErz3ZCtYOxaBYPWqD1TyZCThcwAVZCdxPdiAZBZB9B6NhgJ1bC6YSNqUuZBFGfdvFJP776cxZCW01N1LUEmcZC8JOTZAFXwBSAGIz4JZCGnahZBEnM9WuTbOqo2WlZBoIlGppSbqyEZCB9PuMa7ZBs0HGZCI35qEXRBZCsgKqdYWvSoMUYDayk3LgkzpCnr6agZDZD"
+    }
+
+    connection = http.client.HTTPSConnection("graph.facebook.com")
+
+    try:
+        connection.request("POST", "/v25.0/1158458244021223/messages", data, headers)
+        response = connection.getresponse()
+        response_body = response.read().decode('utf-8')
+        agregar_mensajes_log(f"WhatsApp API -> Status: {response.status} {response.reason} | Body: {response_body}")
+    except Exception as e:
+        agregar_mensajes_log(f"Error de conexion: {str(e)}")
+    finally:
+        connection.close()
+
+# Decide que responder segun el boton que presiono el usuario
+def responder_boton(boton_id, number):
+    number = normalizar_numero_mx(number)
+
+    respuestas = {
+        "btnsi": "¡Perfecto! Tu registro quedó confirmado. ✅",
+        "btnno": "Entendido, no se confirmará tu registro.",
+        "btntalvez": "Sin problema, cuando estés listo me avisas. 😉"
+    }
+
+    texto_respuesta = respuestas.get(boton_id, "No reconozco esa opción.")
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": texto_respuesta
+        }
+    }
+
+    enviar_payload(data)
+
 def enviar_mensajes_whatsapp(texto, number):
     texto = texto.lower()
     number = normalizar_numero_mx(number)
@@ -118,9 +171,9 @@ def enviar_mensajes_whatsapp(texto, number):
                 "body": "🚀 Hola, ¿Cómo estás? Bienvenido."
             }
         }
-    
-    elif "1" in texto: 
-        data  = {
+
+    elif "1" in texto:
+        data = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": number,
@@ -131,18 +184,18 @@ def enviar_mensajes_whatsapp(texto, number):
             }
         }
 
-    elif "2" in texto: 
-        data  = {
-                "messaging_product": "whatsapp",
-                "to": number,
-                "type": "location",
-                "location": {
-                    "latitude": "-12.067158831865067",
-                    "longitude": "-77.03377940839486",
-                    "name": "Estadio Nacional del Perú",
-                    "address": "Cercado de Lima"
-                }
+    elif "2" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "to": number,
+            "type": "location",
+            "location": {
+                "latitude": "-12.067158831865067",
+                "longitude": "-77.03377940839486",
+                "name": "Estadio Nacional del Perú",
+                "address": "Cercado de Lima"
             }
+        }
 
     elif "3" in texto:
         data = {
@@ -151,10 +204,10 @@ def enviar_mensajes_whatsapp(texto, number):
             "to": number,
             "type": "document",
             "document": {
-                    "link": "https://www.soundczech.cz/temp/lorem-ipsum.pdf",
-                    "caption": "Temario del Curso #001"
+                "link": "https://www.soundczech.cz/temp/lorem-ipsum.pdf",
+                "caption": "Temario del Curso #001"
+            }
         }
-    }
 
     elif "4" in texto:
         data = {
@@ -164,8 +217,8 @@ def enviar_mensajes_whatsapp(texto, number):
             "type": "audio",
             "audio": {
                 "link": "https://filesamples.com/samples/audio/mp3/sample1.mp3"
+            }
         }
-    }
 
     elif "5" in texto:
         data = {
@@ -176,8 +229,8 @@ def enviar_mensajes_whatsapp(texto, number):
             "text": {
                 "preview_url": True,
                 "body": "Introduccion al curso! https://youtu.be/6ULOE2tGlBM"
+            }
         }
-    }
 
     elif "6" in texto:
         data = {
@@ -188,9 +241,9 @@ def enviar_mensajes_whatsapp(texto, number):
             "text": {
                 "preview_url": False,
                 "body": "💖 En breve me pondré en contacto contigo. 😎"
+            }
         }
-    }
-        
+
     elif "7" in texto:
         data = {
             "messaging_product": "whatsapp",
@@ -200,9 +253,9 @@ def enviar_mensajes_whatsapp(texto, number):
             "text": {
                 "preview_url": False,
                 "body": "📅 Horario de Atención: Lunes a Viernes.\n📞 Horario: 9:00 am a 5:00 ..."
+            }
         }
-    }
-        
+
     elif "0" in texto:
         data = {
             "messaging_product": "whatsapp",
@@ -250,12 +303,12 @@ def enviar_mensajes_whatsapp(texto, number):
                             "reply": {
                                 "id": "btntalvez",
                                 "title": "Tal Vez"
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
         }
-    }
 
     else:
         data = {
@@ -269,24 +322,7 @@ def enviar_mensajes_whatsapp(texto, number):
             }
         }
 
-    data = json.dumps(data)
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBR6YZCaDpopNnqZBOJZCAtZBj9rzu03y1EWVZC1mxofA7QGZBpesCOiyKxRFhoZBa4dYic4oZBAcnTI2WRZCgSwW9Xg0aZBCz8kgnRGvcEFubiKErz3ZCtYOxaBYPWqD1TyZCThcwAVZCdxPdiAZBZB9B6NhgJ1bC6YSNqUuZBFGfdvFJP776cxZCW01N1LUEmcZC8JOTZAFXwBSAGIz4JZCGnahZBEnM9WuTbOqo2WlZBoIlGppSbqyEZCB9PuMa7ZBs0HGZCI35qEXRBZCsgKqdYWvSoMUYDayk3LgkzpCnr6agZDZD"
-    }
-
-    connection = http.client.HTTPSConnection("graph.facebook.com")
-
-    try:
-        connection.request("POST", "/v25.0/1158458244021223/messages", data, headers)
-        response = connection.getresponse()
-        response_body = response.read().decode('utf-8')
-        agregar_mensajes_log(f"WhatsApp API -> Status: {response.status} {response.reason} | Body: {response_body}")
-    except Exception as e:
-        agregar_mensajes_log(f"Error de conexion: {str(e)}")
-    finally:
-        connection.close()
+    enviar_payload(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
