@@ -73,6 +73,8 @@ def recibir_mensajes(req):
                     enviar_video_construccion(numero)
                 elif texto == "3":
                     enviar_ubicacion(numero)
+                elif texto == "4":
+                    enviar_estacionamiento(numero)
                 else:
                     enviar_bienvenida(numero)
             else:
@@ -94,7 +96,7 @@ def enviar_payload(data):
     data = json.dumps(data)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBR0MXYxCopzrf0Rg1MkPadQyFqKcZAuH237zFVA02BAeqAn84Y5nJnYZBokjXQZCT4esqIITG7fNvHZCTnbVZCWLA6JDQKfFfbDRF61nDStu3rYUIgBOmSpXZCRYWzQQfkfl1mSXE6YXzrRIqsZB7k0IJ6lzcDxo2Wl9ZBkxIwXamQSSmn2PUDZAOgC034CZC4M9giultqzZCBoj1QPru6V5hG6RQ7KU03Q4QeQGDfVJ8Doehp5gdwZBHYJqKuAnihTgEjPS4qb7mwoZAW5BZB3SKooUqzIhv7LngZDZD"
+        "Authorization": "Bearer EAAVEa8dSzTcBRZCRz3dNQgIm11BsShisj3BmvbZAuBJ9sw3kUhsuS5Wi76BInOWhvdHZB2WKmpV5M2eA7IY0VNTMLTpRCULbdNZBI6gZCclGs5aZCSeTIh0mUoPzC20BcBPMmKeKvmwxiJtgvxlI6DQ2l2bAwnZAh13JEfUOdSLZCCH6kVTlqVmkZC8StGrRZAWkcMhSxYTdqZCRQG9u9u0KMFRfbv2BlEyfrVLMafzovv7jM2nZADC2ZCSvhzeHdBeiiq74hZAxF0iZBIbuEtA6pNzBZABuHqe27FYosVXxPvrHHQZDZD"
     }
     connection = http.client.HTTPSConnection("graph.facebook.com")
     try:
@@ -140,7 +142,8 @@ def enviar_bienvenida(number):
                 "Elige una opción escribiendo el número:\n\n"
                 "1️⃣ Conócenos\n"
                 "2️⃣ Video de nosotros\n"
-                "3️⃣ Ubicación del consultorio\n\n"
+                "3️⃣ Ubicación del consultorio\n"
+                "4️⃣ Estacionamiento\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -213,7 +216,7 @@ def enviar_ubicacion(number):
             "latitude": "19.056722627267366",
             "longitude": "-98.23117504866542",
             "name": "BOCA",
-            "address": "Av. Rosendo Márquez 16, Doctors Torres Médicas V, Consultorio 50, La Paz, 72160 Heroica Puebla de Zaragoza, Pue."
+            "address": "Av. Rosendo Márquez 16, 50 Doctors Torres Médicas V, La Paz, 72160 Heroica Puebla de Zaragoza, Pue."
         }
     }
     enviar_payload(data_ubicacion)
@@ -230,10 +233,54 @@ def enviar_ubicacion(number):
             "preview_url": False,
             "body": (
                 "📍 *Nuestra ubicación*\n\n"
-                "Av. Rosendo Márquez 16, Torres Médicas V, 50 Doctors"
+                "Av. Rosendo Márquez 16, Doctors Torres Médicas V, Consultorio 50\n"
                 "La Paz, 72160 Heroica Puebla de Zaragoza, Pue.\n\n"
                 "¡Te esperamos! 😊\n\n"
                 "Escribe *0* para volver al menú principal."
+            )
+        }
+    }
+    enviar_payload(data_texto)
+
+def enviar_estacionamiento(number):
+    number = normalizar_numero_mx(number)
+
+    # 1. Mandamos el pin de ubicacion del estacionamiento
+    data_ubicacion = {
+        "messaging_product": "whatsapp",
+        "to": number,
+        "type": "location",
+        "location": {
+            "latitude": "19.057766",
+            "longitude": "-98.231919",
+            "name": "Estacionamiento",
+            "address": "La Paz, 72160 Heroica Puebla de Zaragoza, Pue."
+        }
+    }
+    enviar_payload(data_ubicacion)
+
+    time.sleep(1.5)
+
+    # 2. Aclaracion + descargo de responsabilidad
+    data_texto = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "🅿️ *Estacionamiento*\n\n"
+                "Como medida de comodidad para ti, te compartimos la "
+                "ubicación de un estacionamiento cercano, justo cruzando "
+                "la calle (ubicación enviada arriba 👆).\n\n"
+                "ℹ️ Este estacionamiento es independiente y *no pertenece "
+                "ni al hospital ni a nuestro consultorio BOCA*. Es un "
+                "servicio externo que se encuentra cerca para tu comodidad.\n\n"
+                "⚠️ Por lo anterior, *BOCA no se hace responsable* por tu "
+                "vehículo, sus pertenencias, ni por cualquier situación que "
+                "pudiera presentarse en dicho estacionamiento.\n\n"
+                "Escribe *0* para volver al menú principal. 😊"
             )
         }
     }
