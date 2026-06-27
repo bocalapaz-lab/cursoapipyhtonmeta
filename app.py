@@ -59,12 +59,20 @@ def recibir_mensajes(req):
         if objeto_mensaje:
             mensaje = objeto_mensaje[0]
             numero = mensaje.get("from")
+            tipo = mensaje.get("type")
 
             agregar_mensajes_log(json.dumps(mensaje, ensure_ascii=False))
 
-            # Sin importar que tipo de mensaje sea (texto, audio, foto, lo que sea),
-            # siempre respondemos con el logo + el saludo de bienvenida.
-            enviar_bienvenida(numero)
+            if tipo == "text":
+                texto = mensaje["text"]["body"].strip()
+
+                if texto == "1":
+                    enviar_conocenos(numero)
+                else:
+                    enviar_bienvenida(numero)
+            else:
+                # Si mandan audio, imagen, sticker, etc. -> tambien mandamos la bienvenida
+                enviar_bienvenida(numero)
 
         return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
@@ -108,7 +116,7 @@ def enviar_bienvenida(number):
     }
     enviar_payload(data_imagen)
 
-    # 2. Justo despues, mandamos el mensaje de bienvenida
+    # 2. Mensaje de bienvenida + menu
     data_bienvenida = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -116,10 +124,51 @@ def enviar_bienvenida(number):
         "type": "text",
         "text": {
             "preview_url": False,
-            "body": "¡Hola! 👋 Gracias por escribirnos a *BOCA*."
+            "body": (
+                "¡Hola! 👋 Gracias por escribirnos a *BOCA*.\n\n"
+                "Soy el asistente virtual del consultorio. Estoy aquí para "
+                "ayudarte en lo que necesites mientras uno de nuestros "
+                "especialistas te atiende personalmente. 😊\n\n"
+                "Elige una opción escribiendo el número:\n\n"
+                "1️⃣ Conócenos\n\n"
+                "Escribe el número de la opción que te interese."
+            )
         }
     }
     enviar_payload(data_bienvenida)
+
+def enviar_conocenos(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "👋 *Conócenos*\n\n"
+                "En *BOCA* contamos con un equipo especializado, comprometido "
+                "con tu salud y bienestar:\n\n"
+                "🦷 *Dra. Yaxcy Reyes García*\n"
+                "Especialista en Cirugía Maxilofacial\n\n"
+                "🦷 *Dr. Rubén Fernández Tamayo*\n"
+                "Especialista en Cirugía Maxilofacial\n\n"
+                "🎯 *Misión*\n"
+                "Brindar atención odontológica y maxilofacial de excelencia, "
+                "con un enfoque humano y profesional, utilizando técnicas "
+                "actualizadas para mejorar la salud y calidad de vida de "
+                "nuestros pacientes.\n\n"
+                "🔭 *Visión*\n"
+                "Ser un consultorio de referencia en cirugía maxilofacial, "
+                "reconocido por la confianza de nuestros pacientes, la "
+                "calidez de nuestro trato y la calidad de nuestros resultados.\n\n"
+                "Escribe *0* para volver al menú principal. 😊"
+            )
+        }
+    }
+    enviar_payload(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
