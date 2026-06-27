@@ -128,6 +128,8 @@ def recibir_mensajes(req):
                 elif texto == "4":
                     enviar_estacionamiento(numero)
                 elif texto == "5":
+                    enviar_horario(numero)
+                elif texto == "6":
                     enviar_ayuda_personalizada(numero)
                 elif texto == "0":
                     enviar_menu(numero)
@@ -246,7 +248,8 @@ def enviar_bienvenida(number):
                 "2️⃣ Video de nosotros\n"
                 "3️⃣ Ubicación del consultorio\n"
                 "4️⃣ Estacionamiento\n"
-                "5️⃣ Ayuda personalizada\n\n"
+                "5️⃣ Horario de atención\n"
+                "6️⃣ Ayuda personalizada\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -269,7 +272,8 @@ def enviar_menu(number):
                 "2️⃣ Video de nosotros\n"
                 "3️⃣ Ubicación del consultorio\n"
                 "4️⃣ Estacionamiento\n"
-                "5️⃣ Ayuda personalizada\n\n"
+                "5️⃣ Horario de atención\n"
+                "6️⃣ Ayuda personalizada\n\n"
                 "Escribe el número de la opción que te interese."
             )
         }
@@ -412,6 +416,33 @@ def enviar_estacionamiento(number):
     }
     enviar_payload(data_texto)
 
+def enviar_horario(number):
+    number = normalizar_numero_mx(number)
+
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": (
+                "🕐 *Horario de Atención*\n\n"
+                "📅 Lunes a Viernes\n"
+                "⏰ 10:00 am – 7:00 pm\n\n"
+                "ℹ️ Fuera de este horario, la opción de *Ayuda "
+                "personalizada* (6️⃣) podría no tener respuesta inmediata, "
+                "ya que nuestro equipo no estará disponible para contestar "
+                "en ese momento.\n\n"
+                "Si es necesario, puedes intentar comunicarte directamente "
+                "al consultorio al teléfono: TODO_TELEFONO_CONSULTORIO.\n\n"
+                "➡️ Escribe *0* para volver al menú principal, o escribe "
+                "directamente el número de otra opción que te interese. 😊"
+            )
+        }
+    }
+    enviar_payload(data)
+
 def enviar_ayuda_personalizada(number):
     number = normalizar_numero_mx(number)
 
@@ -425,7 +456,11 @@ def enviar_ayuda_personalizada(number):
             "body": {
                 "text": (
                     "💬 *Ayuda personalizada*\n\n"
-                    "Cuéntanos cómo prefieres que te ayudemos:"
+                    "Cuéntanos cómo prefieres que te ayudemos:\n\n"
+                    "ℹ️ Si nos escribes fuera de nuestro horario de "
+                    "atención, es posible que tu mensaje no sea respondido "
+                    "de inmediato. Te invitamos a revisar el punto 5️⃣ para "
+                    "conocer nuestros horarios."
                 )
             },
             "footer": {
@@ -437,7 +472,7 @@ def enviar_ayuda_personalizada(number):
                         "type": "reply",
                         "reply": {
                             "id": "btnmensaje",
-                            "title": "Dejar mi mensaje"
+                            "title": "Hablar con nosotros"
                         }
                     },
                     {
@@ -490,9 +525,11 @@ def enviar_confirmacion_llamada(number):
                 "Hemos registrado tu solicitud y uno de nuestros "
                 "especialistas se pondrá en contacto contigo por teléfono "
                 "lo antes posible.\n\n"
-                "Te pedimos estar al pendiente de tu teléfono, ya que la "
-                "llamada podría llegar desde un número distinto al de este "
-                "chat.\n\n"
+                "Por tu seguridad, te contactaremos únicamente desde este "
+                "mismo número de WhatsApp. Si recibes una llamada de un "
+                "número distinto que diga representarnos, te recomendamos "
+                "no confiar en ella y reportarlo directamente con "
+                "nosotros.\n\n"
                 "Gracias por confiar en *BOCA* para tu atención. 😊\n\n"
                 "➡️ Escribe *0* para volver al menú principal."
             )
