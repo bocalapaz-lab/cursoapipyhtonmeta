@@ -76,14 +76,19 @@ def recibir_mensajes(req):
                 tipo = mensaje["type"]
 
                 if tipo == "interactive":
-                    # Ahora guardamos el mensaje completo, no solo la palabra "interactive"
+                    # Guardamos el mensaje completo para poder ver el botón/lista elegida
                     agregar_mensajes_log(json.dumps(mensaje, ensure_ascii=False))
 
                     interactive = mensaje.get("interactive", {})
+                    numero = mensaje["from"]
+
                     if interactive.get("type") == "button_reply":
-                        boton_id = interactive["button_reply"]["id"]
-                        numero = mensaje["from"]
-                        responder_boton(boton_id, numero)
+                        opcion_id = interactive["button_reply"]["id"]
+                        responder_opcion(opcion_id, numero)
+
+                    elif interactive.get("type") == "list_reply":
+                        opcion_id = interactive["list_reply"]["id"]
+                        responder_opcion(opcion_id, numero)
 
                     return jsonify({'message': 'EVENT_RECEIVED'}), 200
 
@@ -109,14 +114,12 @@ def normalizar_numero_mx(numero):
     return numero
 
 # Función central que manda cualquier payload ya armado a Graph API.
-# La usan tanto enviar_mensajes_whatsapp como responder_boton, para no
-# repetir el mismo bloque de conexión/headers dos veces.
 def enviar_payload(data):
     data = json.dumps(data)
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer EAAVEa8dSzTcBR0dNxUoIc02ZBZCm1MZAoTOM3SZCZCx5olkQJOm51DGTQWiP19JCnXkQDJI0z30erTGUOASXA6L0kEkIwalZBZAWMHGELptnEJakOguFmW8aMZCXe1MCISC693ZBbaPpr08Ueq5VMnF6TpTuMOyLR40d8KLOiOyWvRIfkIlq5wK588aas74b7taJDmiOVXpwLubzcYBK4UPdwqI6Cqd66ecyVWesg9eHcvJd4kOOphnA0gZANIUIIE8XLfZC21TfwAIjPQZBpBbcTkWYlayZBBxobLhnZBiml5GgZDZD"
+        "Authorization": "Bearer EAAVEa8dSzTcBR6YZCaDpopNnqZBOJZCAtZBj9rzu03y1EWVZC1mxofA7QGZBpesCOiyKxRFhoZBa4dYic4oZBAcnTI2WRZCgSwW9Xg0aZBCz8kgnRGvcEFubiKErz3ZCtYOxaBYPWqD1TyZCThcwAVZCdxPdiAZBZB9B6NhgJ1bC6YSNqUuZBFGfdvFJP776cxZCW01N1LUEmcZC8JOTZAFXwBSAGIz4JZCGnahZBEnM9WuTbOqo2WlZBoIlGppSbqyEZCB9PuMa7ZBs0HGZCI35qEXRBZCsgKqdYWvSoMUYDayk3LgkzpCnr6agZDZD"
     }
 
     connection = http.client.HTTPSConnection("graph.facebook.com")
@@ -131,17 +134,24 @@ def enviar_payload(data):
     finally:
         connection.close()
 
-# Decide que responder segun el boton que presiono el usuario
-def responder_boton(boton_id, number):
+# Decide que responder segun la opcion elegida, ya sea de un boton o de una lista
+def responder_opcion(opcion_id, number):
     number = normalizar_numero_mx(number)
 
     respuestas = {
+        # Respuestas del menu de botones ("boton")
         "btnsi": "¡Perfecto! Tu registro quedó confirmado. ✅",
         "btnno": "Entendido, no se confirmará tu registro.",
-        "btntalvez": "Sin problema, cuando estés listo me avisas. 😉"
+        "btntalvez": "Sin problema, cuando estés listo me avisas. 😉",
+
+        # Respuestas del menu de lista ("lista")
+        "btncompra": "🛒 Genial, cuéntame qué artículo te interesa comprar.",
+        "btnvender": "📦 Perfecto, dime qué artículo quieres vender y su estado.",
+        "btndireccion": "📍 Puedes visitarnos en nuestro local en horario de atención.",
+        "btnenvio": "🚚 Con gusto, ¿a qué dirección quieres que enviemos tu pedido?"
     }
 
-    texto_respuesta = respuestas.get(boton_id, "No reconozco esa opción.")
+    texto_respuesta = respuestas.get(opcion_id, "No reconozco esa opción.")
 
     data = {
         "messaging_product": "whatsapp",
@@ -304,6 +314,58 @@ def enviar_mensajes_whatsapp(texto, number):
                                 "id": "btntalvez",
                                 "title": "Tal Vez"
                             }
+                        }
+                    ]
+                }
+            }
+        }
+
+    elif "lista" in texto:
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": number,
+            "type": "interactive",
+            "interactive": {
+                "type": "list",
+                "body": {
+                    "text": "Selecciona Alguna Opcion"
+                },
+                "footer": {
+                    "text": "Selecciona una de las opciones para poder ayudarte"
+                },
+                "action": {
+                    "button": "Ver Opciones",
+                    "sections": [
+                        {
+                            "title": "Compra y Venta",
+                            "rows": [
+                                {
+                                    "id": "btncompra",
+                                    "title": "Comprar",
+                                    "description": "Compra los mejores articulos de tecnologia"
+                                },
+                                {
+                                    "id": "btnvender",
+                                    "title": "Vender",
+                                    "description": "Vende lo que ya no estes usando"
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Distribucion y Entrega",
+                            "rows": [
+                                {
+                                    "id": "btndireccion",
+                                    "title": "Local",
+                                    "description": "Puedes visitar nuestro local."
+                                },
+                                {
+                                    "id": "btnenvio",
+                                    "title": "Envio",
+                                    "description": "Te lo enviamos a tu domicilio"
+                                }
+                            ]
                         }
                     ]
                 }
